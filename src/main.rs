@@ -5,22 +5,27 @@ use kvm_bindings::kvm_userspace_memory_region;
 use kvm_ioctls::{Kvm, VcpuExit};
 use mmarinus::{perms, Kind, Map};
 
+const MEM_SIZE: usize = 0x2000;
+const CODE_SIZE: usize = 0x1000;
+
 #[naked]
 pub unsafe extern "sysv64" fn code() -> ! {
     asm!(
         "
 .code16
 code_start:
+    add ax, bx
     hlt
 code_end:
-.fill((4096 - (code_end - code_start)))
+.fill(({CODE_SIZE} - (code_end - code_start)))
     ",
-        options(noreturn)
+    CODE_SIZE = const CODE_SIZE,
+    options(noreturn)
     )
 }
 
 fn main() {
-    const MEM_SIZE: usize = 0x1000;
+    assert!(MEM_SIZE >= CODE_SIZE);
 
     let kvm = Kvm::new().unwrap();
     let vm = kvm.create_vm().unwrap();
@@ -31,10 +36,8 @@ fn main() {
         .known::<perms::ReadWrite>(Kind::Private)
         .unwrap();
 
-    let code = unsafe { std::slice::from_raw_parts(code as *const u8, 4096) };
-    let target = unsafe { std::slice::from_raw_parts_mut(address_space.as_mut_ptr(), 4096) };
-
-    target.copy_from_slice(code);
+    let code = unsafe { std::slice::from_raw_parts(code as *const u8, CODE_SIZE) };
+    address_space[..CODE_SIZE].copy_from_slice(code);
 
     let mem_region = kvm_userspace_memory_region {
         slot: 0,
@@ -56,6 +59,8 @@ fn main() {
 
     let mut regs = vcpu.get_regs().unwrap();
     regs.rflags = 2;
+    regs.rax = 1;
+    regs.rbx = 2;
     regs.rip = 0x0;
     vcpu.set_regs(&regs).unwrap();
 
@@ -65,6 +70,9 @@ fn main() {
             exit_reason => panic!("unexpected exit reason: {:?}", exit_reason),
         }
     }
+
+    let regs = vcpu.get_regs().unwrap();
+    assert_eq!(regs.rax, 3);
 
     println!("Everything works!");
 }
