@@ -56,6 +56,8 @@ fn main() {
 
     let mut regs = vcpu.get_regs().unwrap();
     regs.rflags = 2;
+    regs.rax = 1;
+    regs.rbx = 2;
     regs.rip = 0x0;
     vcpu.set_regs(&regs).unwrap();
 
@@ -66,5 +68,7 @@ fn main() {
         }
     }
 
+    let regs = vcpu.get_regs().unwrap();
+    assert_eq!(regs.rax, 3);
     println!("Everything works!");
 }
