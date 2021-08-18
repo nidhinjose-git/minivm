@@ -12,6 +12,10 @@ pub unsafe extern "sysv64" fn code() -> ! {
 .code16
 code_start:
     add ax, bx
+    cmp ax, 10
+    JNE L1
+    mov ax, 0
+    L1:
     hlt
 code_end:
 .fill((4096 - (code_end - code_start)))
@@ -57,8 +61,10 @@ fn main() {
 
     let mut regs = vcpu.get_regs().unwrap();
     regs.rflags = 2;
-    regs.rax = 1;
-    regs.rbx = 2;
+    let x = 6;
+    let y = 4;
+    regs.rax = x;
+    regs.rbx = y;
     regs.rip = 0x0;
     vcpu.set_regs(&regs).unwrap();
 
@@ -70,7 +76,11 @@ fn main() {
     }
 
     let regs = vcpu.get_regs().unwrap();
-    assert_eq!(regs.rax, 3);
+    if x + y == 10 {
+        assert_eq!(regs.rax, 0);
+    } else {
+        assert_eq!(regs.rax, x + y);
+    }
 
     println!("Everything works!");
 }
