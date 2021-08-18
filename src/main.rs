@@ -11,6 +11,7 @@ pub unsafe extern "sysv64" fn code() -> ! {
         "
 .code16
 code_start:
+    add ax, bx
     hlt
 code_end:
 .fill((4096 - (code_end - code_start)))
