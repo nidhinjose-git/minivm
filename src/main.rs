@@ -34,10 +34,8 @@ fn main() {
         .known::<perms::ReadWrite>(Kind::Private)
         .unwrap();
 
-    let code = unsafe { std::slice::from_raw_parts(code as *const u8, 4096) };
-    let target = unsafe { std::slice::from_raw_parts_mut(address_space.as_mut_ptr(), 4096) };
-
-    target.copy_from_slice(code);
+    let code = unsafe { std::slice::from_raw_parts(code as *const u8, CODE_SIZE) };
+    address_space[..CODE_SIZE].copy_from_slice(code);
 
     let mem_region = kvm_userspace_memory_region {
         slot: 0,
