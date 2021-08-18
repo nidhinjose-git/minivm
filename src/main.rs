@@ -5,6 +5,9 @@ use kvm_bindings::kvm_userspace_memory_region;
 use kvm_ioctls::{Kvm, VcpuExit};
 use mmarinus::{perms, Kind, Map};
 
+const MEM_SIZE: usize = 0x2000;
+const CODE_SIZE: usize = 0x1000;
+
 #[naked]
 pub unsafe extern "sysv64" fn code() -> ! {
     asm!(
@@ -13,14 +16,14 @@ pub unsafe extern "sysv64" fn code() -> ! {
 code_start:
     hlt
 code_end:
-.fill((4096 - (code_end - code_start)))
+.fill(({CODE_SIZE} - (code_end - code_start)))
     ",
         options(noreturn)
     )
 }
 
 fn main() {
-    const MEM_SIZE: usize = 0x1000;
+    assert!(MEM_SIZE >= CODE_SIZE);
 
     let kvm = Kvm::new().unwrap();
     let vm = kvm.create_vm().unwrap();
